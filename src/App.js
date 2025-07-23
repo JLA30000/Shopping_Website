@@ -30,7 +30,7 @@ function App() {
   };
 
   return (
-    <Router basename="/Shopping_Website">
+    <Router>
       <AppContent products={products} cart={cart} setCart={setCart} addToCart={addToCart} />
     </Router>
   );

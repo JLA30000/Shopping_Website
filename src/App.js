@@ -7,9 +7,14 @@ function App() {
   const [cart, setCart] = useState([]);
 
   useEffect(() => {
+    console.log("works");
     fetch('https://dummyjson.com/products')
       .then(res => res.json())
-      .then(json => setProducts(json.products || []));
+      .then(json => {
+        console.log("Fetched JSON", json.products);
+        setProducts(json.products || []);
+      });
+
   }, []);
 
   const addToCart = (product) => {
@@ -25,7 +30,7 @@ function App() {
   };
 
   return (
-    <Router>
+    <Router basename="/Shopping_Website">
       <AppContent products={products} cart={cart} setCart={setCart} addToCart={addToCart} />
     </Router>
   );

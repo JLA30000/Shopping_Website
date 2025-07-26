@@ -54,22 +54,31 @@ function AppContent({ products, cart, setCart, addToCart }) {
   return (
     <div className="App">
       <div className="top-bar">
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        {!isCartPage ? (
-          <Link to="/cart" className="cart-button">
-            🛒 Go to Cart ({cart.reduce((a, b) => a + b.quantity, 0)})
-          </Link>
-        ) : (
-          <button onClick={() => navigate('/')} className="cart-button">
-            🏬 Continue Shopping
-          </button>
-        )}
+        <div className="left-side">
+    <input
+      type="text"
+      placeholder="Search products..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+    />
+  </div>
+  
+  <div className="right-side">
+    {!isCartPage ? (
+      <Link to="/cart" className="cart-button">
+        🛒 Go to Cart ({cart.reduce((a, b) => a + b.quantity, 0)})
+      </Link>
+    ) : (
+      <button onClick={() => navigate('/')} className="cart-button">
+        🏬 Continue Shopping
+      </button>
+    )}
+
+        <button className="login-button" onClick={() => alert("Login clicked!")}>Login</button>
+          <button className="register-button" onClick={() => alert("Register clicked!")}>Register</button>
+        </div>
       </div>
+
 
       {!isCartPage && !isProductPage && (
         <div className="tabs">

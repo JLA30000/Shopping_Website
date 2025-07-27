@@ -14,10 +14,9 @@ function App() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
 
-  // Users stored as [{username, password}]
   const [users, setUsers] = useState([]);
-  // Currently logged in user object or null
   const [currentUser, setCurrentUser] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   useEffect(() => {
     fetch('https://dummyjson.com/products')
@@ -29,7 +28,7 @@ function App() {
 
   const addToCart = (product) => {
     if (!currentUser) {
-      alert('Please login first to add items to cart.');
+      setNotification({ type: 'error', message: 'Please login first to add items to cart.' });
       return;
     }
     setCart((prevCart) => {
@@ -45,16 +44,16 @@ function App() {
 
   const handleRegister = (username, password) => {
     if (!username || !password) {
-      alert('Please enter both username and password.');
+      setNotification({ type: 'error', message: 'Please enter both username and password.' });
       return false;
     }
     if (users.find((u) => u.username === username)) {
-      alert('Username already taken.');
+      setNotification({ type: 'error', message: 'Username already taken.' });
       return false;
     }
     const newUser = { username, password };
     setUsers((prev) => [...prev, newUser]);
-    alert('Registration successful! Please login.');
+    setNotification({ type: 'success', message: 'Registration successful! Please login.' });
     return true;
   };
 
@@ -64,10 +63,10 @@ function App() {
     );
     if (user) {
       setCurrentUser(user);
-      alert(`Welcome back, ${username}!`);
+      setNotification({ type: 'success', message: `Welcome back, ${username}!` });
       return true;
     } else {
-      alert('Invalid username or password.');
+      setNotification({ type: 'error', message: 'Invalid username or password.' });
       return false;
     }
   };
@@ -88,6 +87,8 @@ function App() {
         onLogin={handleLogin}
         onRegister={handleRegister}
         onLogout={handleLogout}
+        notification={notification}
+        setNotification={setNotification}
       />
     </Router>
   );
@@ -102,6 +103,8 @@ function AppContent({
   onLogin,
   onRegister,
   onLogout,
+  notification,
+  setNotification,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -119,23 +122,25 @@ function AppContent({
       p.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // State to control showing login/register modals
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   return (
     <div className="App">
-      {/* Remove any white bar if present (in CSS) */}
-
       <div className="top-bar">
-        <div className="left-side">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {!isCartPage ? (
+          <div className="left-side">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div className="left-side">
+          </div>
+        )}
 
         <div className="right-side">
           {currentUser ? (
@@ -242,6 +247,13 @@ function AppContent({
             const success = onRegister(u, p);
             if (success) setShowRegisterModal(false);
           }}
+        />
+      )}
+
+      {notification && (
+        <CustomNotification 
+          notification={notification} 
+          onClose={() => setNotification(null)} 
         />
       )}
     </div>
@@ -371,34 +383,30 @@ function ProductDetail({ products, addToCart }) {
           onClick={() => setPopupContent('')}
         >
           <div
-            className="popup-window"
+            className="enhanced-popup-window"
             onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: '#222',
-              color: '#fff',
-              padding: '20px',
-              borderRadius: '10px',
-            }}
           >
-            <h2>{popupTitle}</h2>
+            <div className="popup-header">
+              <h2>{popupTitle}</h2>
+              <button
+                className="close-x"
+                onClick={() => setPopupContent('')}
+              >
+                ×
+              </button>
+            </div>
             <div
+              className="popup-content"
               dangerouslySetInnerHTML={{ __html: popupContent }}
-              style={{ maxHeight: '400px', overflowY: 'auto' }}
             />
-            <button
-              onClick={() => setPopupContent('')}
-              style={{
-                fontSize: '24px',
-                backgroundColor: 'red',
-                color: 'white',
-                padding: '15px 30px',
-                marginTop: '20px',
-                border: 'none',
-                borderRadius: '6px',
-              }}
-            >
-              Close
-            </button>
+            <div className="popup-footer">
+              <button
+                className="close-button"
+                onClick={() => setPopupContent('')}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -422,6 +430,7 @@ function CartSummary({ cart, setCart }) {
   const navigate = useNavigate();
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState('');
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   const increaseQuantity = (id) => {
     setCart(
@@ -443,6 +452,16 @@ function CartSummary({ cart, setCart }) {
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handlePurchase = () => {
+    setShowPurchaseModal(true);
+    setTimeout(() => {
+      setShowPurchaseModal(false);
+      setCart([]);
+      setShowPaymentOptions(false);
+      setSelectedPayment('');
+    }, 3000);
+  };
 
   return (
     <div className="cart-summary">
@@ -526,10 +545,7 @@ function CartSummary({ cart, setCart }) {
               {selectedPayment && (
                 <button 
                   className="buy-button"
-                  onClick={() => {
-                    alert(`Processing payment via ${selectedPayment}...`);
-                    // Add your purchase logic here
-                  }}
+                  onClick={handlePurchase}
                 >
                   🛒 BUY NOW
                 </button>
@@ -538,11 +554,26 @@ function CartSummary({ cart, setCart }) {
           )}
         </>
       )}
+
+      {showPurchaseModal && (
+        <div className="popup-overlay">
+          <div className="enhanced-popup-window success-popup">
+            <div className="popup-header">
+              <div className="success-icon">✅</div>
+              <h2>Purchase Successful!</h2>
+            </div>
+            <div className="popup-content">
+              <p>Thank you for your purchase!</p>
+              <p>Payment processed via {selectedPayment}</p>
+              <p>Your order will be shipped soon.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Login Modal
 function LoginModal({ onClose, onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -550,48 +581,49 @@ function LoginModal({ onClose, onLogin }) {
   return (
     <div className="popup-overlay" onClick={onClose}>
       <div
-        className="popup-window"
+        className="enhanced-popup-window auth-popup"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#222',
-          color: '#fff',
-          padding: '20px',
-          borderRadius: '10px',
-          maxWidth: '400px',
-          margin: 'auto',
-          marginTop: '10vh',
-        }}
       >
-        <h2>Login</h2>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-        />
-        <button
-          onClick={() => onLogin(username, password)}
-          style={{ padding: '10px 20px', marginRight: '10px' }}
-        >
-          Login
-        </button>
-        <button onClick={onClose} style={{ padding: '10px 20px' }}>
-          Cancel
-        </button>
+        <div className="popup-header">
+          <div className="auth-icon">🔐</div>
+          <h2>Welcome Back</h2>
+          <button className="close-x" onClick={onClose}>×</button>
+        </div>
+        <div className="popup-content">
+          <p>Sign in to your account</p>
+          <div className="input-group">
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="popup-footer">
+          <button
+            className="primary-button"
+            onClick={() => onLogin(username, password)}
+          >
+            Sign In
+          </button>
+          <button className="secondary-button" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Register Modal
 function RegisterModal({ onClose, onRegister }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -599,41 +631,69 @@ function RegisterModal({ onClose, onRegister }) {
   return (
     <div className="popup-overlay" onClick={onClose}>
       <div
-        className="popup-window"
+        className="enhanced-popup-window auth-popup"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#222',
-          color: '#fff',
-          padding: '20px',
-          borderRadius: '10px',
-          maxWidth: '400px',
-          margin: 'auto',
-          marginTop: '10vh',
-        }}
       >
-        <h2>Register</h2>
-        <input
-          type="text"
-          placeholder="Choose a username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-        />
-        <input
-          type="password"
-          placeholder="Choose a password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={{ width: '100%', padding: '8px', marginBottom: '10px' }}
-        />
-        <button
-          onClick={() => onRegister(username, password)}
-          style={{ padding: '10px 20px', marginRight: '10px' }}
-        >
-          Register
-        </button>
-        <button onClick={onClose} style={{ padding: '10px 20px' }}>
-          Cancel
+        <div className="popup-header">
+          <div className="auth-icon">👤</div>
+          <h2>Create Account</h2>
+          <button className="close-x" onClick={onClose}>×</button>
+        </div>
+        <div className="popup-content">
+          <p>Join us today!</p>
+          <div className="input-group">
+            <input
+              type="text"
+              placeholder="Choose a username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <input
+              type="password"
+              placeholder="Choose a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="popup-footer">
+          <button
+            className="primary-button"
+            onClick={() => onRegister(username, password)}
+          >
+            Create Account
+          </button>
+          <button className="secondary-button" onClick={onClose}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomNotification({ notification, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`custom-notification ${notification.type}`}>
+      <div className="notification-content">
+        <div className="notification-icon">
+          {notification.type === 'success' ? '✅' : '❌'}
+        </div>
+        <div className="notification-message">
+          {notification.message}
+        </div>
+        <button className="notification-close" onClick={onClose}>
+          ×
         </button>
       </div>
     </div>
